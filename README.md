@@ -1,2 +1,2 @@
 # Room-Mesh-Unity
-creatin mesh of room in unty
+creating mesh of room in unity using ray casts
