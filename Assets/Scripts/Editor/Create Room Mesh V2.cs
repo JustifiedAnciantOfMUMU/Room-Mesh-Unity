@@ -17,7 +17,7 @@ public class CreateRoomMeshV2
         foreach (var item in m_ReverbZones)
         {
             getCentrePoint(item);
-            List<Vector3> points = getPoints(250); // num points|| max num = 65535 due to int variable type
+            List<Vector3> points = getPoints(65535); // num points|| max num = 65535 due to int variable type
             // IList<Vector2> points2D = pointsTo2D(points);
             List<Vector3> drape;
             int[] allTriangles = calculatedrapeMesh(points, out drape); //DelaunayTriangulation(points);
@@ -26,7 +26,7 @@ public class CreateRoomMeshV2
 
             Mesh mesh = new Mesh();
             List<Vector3> CollisionPoints = rcCollisionPoints(raycastCollisions);
-            mesh.SetVertices(CollisionPoints); 
+            mesh.SetVertices(CollisionPoints);
             mesh.SetTriangles(allTriangles, 0);
             m_CurrentCentrePoint.GetComponent<MeshFilter>().mesh = mesh;
 
@@ -99,7 +99,7 @@ public class CreateRoomMeshV2
 
             if (Physics.Raycast(ray, out collision, Mathf.Infinity))
             {
-                //Debug.Log("hit" + collision.point);
+                Debug.Log("hit" + collision.point);
                 Debug.DrawLine(ray.origin, collision.point, Color.red);
                 collisions.Add(collision);
             }
@@ -213,11 +213,15 @@ public class CreateRoomMeshV2
 
         for (int i = 0; i < triangles.Count; i = i + 3)
         {
-            float surfaceArea = calcSurfaceArea(i, triangles, collisionPoints);
+            Vector3 point1 = collisionPoints[triangles[i]];
+            Vector3 point2 = collisionPoints[triangles[i + 1]];
+            Vector3 point3 = collisionPoints[triangles[i + 2]];
+
+            float surfaceArea = calcSurfaceArea(point1, point2, point3);
             //float[] absorptionSpectrum = objectAbsorptionSpectrum(i, triangles, raycastCollisions, surfaceArea);
             //AvAbsorptionSpec  = absorptionSpectrum;
             //alpha = absorptionSpectrum[3] * surfaceArea;
-            totalVolume += calcVolume(i, triangles, collisionPoints, surfaceArea);
+            totalVolume += calcVolume(point1, point2, point3, surfaceArea);
             totalSurfaceArea += surfaceArea;
         }
         Debug.Log("SF: " + totalSurfaceArea);
@@ -226,115 +230,41 @@ public class CreateRoomMeshV2
         return totalSurfaceArea;
     }
 
-    private static float calcSurfaceArea(int i, List<int> triangles, List<Vector3> collisionPoints)
+    private static float calcSurfaceArea(Vector3 point1, Vector3 point2, Vector3 point3)
     {
-        float side1 = Vector3.Distance(collisionPoints[triangles[i]], collisionPoints[triangles[i + 1]]); // distance round triangle
-        float side2 = Vector3.Distance(collisionPoints[triangles[i + 1]], collisionPoints[triangles[i + 2]]);
-        float side3 = Vector3.Distance(collisionPoints[triangles[i + 2]], collisionPoints[triangles[i]]);
+        //heron's formula / 0.1 is scale factopr for coordinates
+        float side1 = 0.1f * Vector3.Distance(point1, point2); // distance round triangle
+        float side2 = 0.1f * Vector3.Distance(point2, point3);
+        float side3 = 0.1f * Vector3.Distance(point3, point1);
 
-        float surfaceArea = 0.5f * Mathf.Sqrt((side1 + side2 + side3) * (-side1 + side2 + side3) * (side1 - side2 + side3) * (side1 + side2 - side3)); //heron's formula
+        float s = (side1 + side2 + side3) / 2;
+        float surfaceArea = Mathf.Sqrt(s * ((s - side1) * (s - side2) * (s - side3)));
 
         Debug.Log("Surface Area: " + surfaceArea);
 
         return surfaceArea;
     }
-    private static float calcVolume(int i, List<int> triangles, List<Vector3> collisionPoints, float surfaceArea)
+    private static float calcVolume(Vector3 point1, Vector3 point2, Vector3 point3, float surfaceArea)
     {
         float volume;
         Vector3 origin = m_CurrentCentrePoint.transform.position;
 
-        float length1 = Vector3.Distance(collisionPoints[triangles[i]], origin); // distance round triangle
-        float length2 = Vector3.Distance(collisionPoints[triangles[i + 1]], origin);
-        float length3 = Vector3.Distance(collisionPoints[triangles[i + 2]], origin);
+        float centroidX = (point1.x + point2.x + point3.x) / 3;
+        float centroidY = (point1.y + point2.y + point3.y) / 3;
+        float centroidZ = (point1.z + point2.z + point3.z) / 3;
+        Vector3 centroid = new Vector3 (centroidX, centroidY, centroidZ);
 
-        float avLength = (length1 + length2 + length3) / 3;
-        volume = (surfaceArea * avLength) / 3;
+        float height = 0.1f * Vector3.Distance(centroid, origin);
 
-        Debug.Log("Volume: " + volume);
+        volume = (surfaceArea * height) / 3;
 
-        return volume;
+        Vector3 v1 = Vector3.Cross(point1, point2);
+        float volume2 = Mathf.Abs(Vector3.Dot(v1, point3)/6) * 0.001f;
+        
+        Debug.Log("Volume:  " + volume);
+        Debug.Log("Volume2: " + volume2);
+
+        return volume2;
     }
-    //outputs average absorption spectrum of all three points
-    //private static float[] objectAbsorptionSpectrum(int i, List<int> triangles, IList<RaycastHit> raycastCollisions, float surfaceArea)
-    //{
-    //    float[] trianglesAbsorption = new float[7];
-    //    float ppSurfaceArea = surfaceArea / 3; //surface area divided up pp
-
-    //    for(int point = i; point < (i + 3); i++)
-    //    {
-    //        GameObject gameobjectAtPoint = raycastCollisions[triangles[i]].collider.gameObject; // gets gameobject
-    //        MeshRenderer objectMeshRenderer = gameobjectAtPoint.GetComponent<MeshRenderer>();
-    //        Material objectMaterial = objectMeshRenderer.sharedMaterial;
-    //        if (objectMaterial != null)
-    //        {
-    //            trianglesAbsorption = absorptionSpectrumLookup(objectMaterial); //sums absorption spectrums of all three points
-    //        }
-
-    //        foreach (int index in trianglesAbsorption)
-    //        {
-    //            index.Equals(index / 3); // divdes by three to create average spectrum
-    //        }
-    //    }
-    //    //d
-    //    foreach (int index in trianglesAbsorption)
-    //    {
-    //        index.Equals(index / 3);
-    //    }
-
-    //    return trianglesAbsorption;
-    //}
-    ////looks up material absorption spec
-    //private static float[] absorptionSpectrumLookup(Material meterial)
-    //{
-    //    if (meterial.name.Contains("metal"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.01f, 0.01f, 0.01f, 0.02f, 0.02f, 0.02f, 0.02f };
-    //    }
-    //    else if (meterial.name.Contains("Wood"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.27f, 0.23f, 0.22f, 0.15f, 0.10f, 0.07f, 0.06f };
-    //    }
-    //    else if (meterial.name.Contains("brick"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.03f, 0.03f, 0.03f, 0.04f, 0.05f, 0.07f, 0.07f };
-    //    }
-    //    else if (meterial.name.Contains("plaster"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.15f, 0.10f, 0.06f, 0.04f, 0.04f, 0.05f, 0.05f };
-    //    }
-    //    else if (meterial.name.Contains("tile"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.01f, 0.01f, 0.01f, 0.02f, 0.02f, 0.02f, 0.02f };
-    //    }
-    //    else if (meterial.name.Contains("absorption"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.22f, 0.60f, 0.92f, 0.90f, 0.88f, 0.88f, 0.88f };
-    //    }
-    //    else if (meterial.name.Contains("concrete"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.01f, 0.01f, 0.02f, 0.02f, 0.02f, 0.05f, 0.05f };
-    //    }
-    //    else if (meterial.name.Contains("glass"))
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.08f, 0.04f, 0.03f, 0.03f, 0.02f, 0.02f, 0.02f };
-    //    }
-    //    else
-    //    {
-    //        float[] absorptionSpectrum = new float[7] { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
-    //    }
-
-    //    return AbsorptionSpectrum;
-    //}
-    //private static float[] addFloatArrays(float[] array1, float[] array2)
-    //{
-    //    float[] outputArray = new float[7];
-
-    //    for (int i = 0; i < 7; i++ )
-    //    {
-    //        outputArray[i] = array1[i] + array2[i];
-    //    }
-
-    //    return outputArray;
-    //}
 }
 
