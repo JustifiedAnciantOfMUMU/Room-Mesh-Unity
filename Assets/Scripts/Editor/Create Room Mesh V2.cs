@@ -8,6 +8,7 @@ public class CreateRoomMeshV2
 {
     private static AudioReverbZone[] m_ReverbZones;
     private static GameObject m_CurrentCentrePoint;
+    private const float SCALEFACTOR = 0.1f;
 
     [MenuItem("Tools/Geometry/CreateRoomMeshV2")]
     private static void main()
@@ -233,9 +234,9 @@ public class CreateRoomMeshV2
     private static float calcSurfaceArea(Vector3 point1, Vector3 point2, Vector3 point3)
     {
         //heron's formula / 0.1 is scale factopr for coordinates
-        float side1 = 0.1f * Vector3.Distance(point1, point2); // distance round triangle
-        float side2 = 0.1f * Vector3.Distance(point2, point3);
-        float side3 = 0.1f * Vector3.Distance(point3, point1);
+        float side1 = SCALEFACTOR * Vector3.Distance(point1, point2); // distance round triangle
+        float side2 = SCALEFACTOR * Vector3.Distance(point2, point3);
+        float side3 = SCALEFACTOR * Vector3.Distance(point3, point1);
 
         float s = (side1 + side2 + side3) / 2;
         float surfaceArea = Mathf.Sqrt(s * ((s - side1) * (s - side2) * (s - side3)));
@@ -249,22 +250,25 @@ public class CreateRoomMeshV2
         float volume;
         Vector3 origin = m_CurrentCentrePoint.transform.position;
 
-        float centroidX = (point1.x + point2.x + point3.x) / 3;
-        float centroidY = (point1.y + point2.y + point3.y) / 3;
-        float centroidZ = (point1.z + point2.z + point3.z) / 3;
-        Vector3 centroid = new Vector3 (centroidX, centroidY, centroidZ);
+        //float centroidX = (point1.x + point2.x + point3.x) / 3;
+        //float centroidY = (point1.y + point2.y + point3.y) / 3;
+        //float centroidZ = (point1.z + point2.z + point3.z) / 3;
+        //Vector3 centroid = new Vector3 (centroidX, centroidY, centroidZ);
 
-        float height = 0.1f * Vector3.Distance(centroid, origin);
+        //float height = 0.1f * Vector3.Distance(centroid, origin);
 
-        volume = (surfaceArea * height) / 3;
+        //volume = (surfaceArea * height) / 3;
 
-        Vector3 v1 = Vector3.Cross(point1, point2);
-        float volume2 = Mathf.Abs(Vector3.Dot(v1, point3)/6) * 0.001f;
-        
-        Debug.Log("Volume:  " + volume);
-        Debug.Log("Volume2: " + volume2);
+        //Vector3 v1 = Vector3.Cross(point1, point2);
+        //float volume2 = Mathf.Abs(Vector3.Dot(v1, point3)/6) * 0.001f;
 
-        return volume2;
+        //Debug.Log("Volume:  " + volume);
+        //Debug.Log("Volume2: " + volume2);
+
+        volume = Mathf.Abs((Vector3.Dot(point1 - origin, Vector3.Cross(point2 - origin, point3 - origin))) / 6); //volume of a tetrahedrom
+        volume = volume * Mathf.Pow(SCALEFACTOR, 3); //scaling
+
+        return volume;
     }
 }
 
