@@ -250,21 +250,6 @@ public class CreateRoomMeshV2
         float volume;
         Vector3 origin = m_CurrentCentrePoint.transform.position;
 
-        //float centroidX = (point1.x + point2.x + point3.x) / 3;
-        //float centroidY = (point1.y + point2.y + point3.y) / 3;
-        //float centroidZ = (point1.z + point2.z + point3.z) / 3;
-        //Vector3 centroid = new Vector3 (centroidX, centroidY, centroidZ);
-
-        //float height = 0.1f * Vector3.Distance(centroid, origin);
-
-        //volume = (surfaceArea * height) / 3;
-
-        //Vector3 v1 = Vector3.Cross(point1, point2);
-        //float volume2 = Mathf.Abs(Vector3.Dot(v1, point3)/6) * 0.001f;
-
-        //Debug.Log("Volume:  " + volume);
-        //Debug.Log("Volume2: " + volume2);
-
         volume = Mathf.Abs((Vector3.Dot(point1 - origin, Vector3.Cross(point2 - origin, point3 - origin))) / 6); //volume of a tetrahedrom
         volume = volume * Mathf.Pow(SCALEFACTOR, 3); //scaling
 
